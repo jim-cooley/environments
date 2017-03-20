@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+#
+
+usage="
+usage:
+aws-list-instances: [ -p {profile}] [{region}]
+
+parameters:
+-p | --profile {profile} - use '{profile}' instead of the default profile in the environment file.
+{region}                 - list instances in specified region
+"
+
+declare profile=""
+declare region=""
+declare region_name="default"
+declare -i stop=0
+
+if [ $# -eq 0 ]; then
+	printf "\n%s\n" "$usage"
+else
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-h | --help)
+				printf "\n%s\n" "$usage"
+				stop=1
+				;;
+			-p | --profile)
+				profile="--profile $2" && shift ;;
+			*)
+				region_name="$1"
+				region="--region $1";;
+		esac
+		shift
+	done
+fi
+
+if [ $stop -eq 0 ]; then
+
+	printf "\nInstance Report for region: $region_name\n\n"
+
+	printf "\nLaunchTime                        AvailabilityZone State    InstanceId                AMI             SecurityGroups[0].GroupName      Tags           \n"
+	echo     '--------------------------------- ---------------- -------- ------------------------- --------------- -------------------------------- --------------------------'
+	aws ec2 describe-instances $profile $region --query 'Reservations[].Instances[].[LaunchTime, Placement.AvailabilityZone, State.Name, InstanceId, ImageId, SecurityGroups[0].GroupName, KeyName, Tags[?Key==`Prefix`].Value | [0]]' --output text | sort -k2
+
+fi

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+: ${ENVROOT?-"!! MUST specify 'ENVROOT'"}
+export PATH="$ENVROOT/bin:$PATH"
+
+cdcover () {
+  env='.env'
+  if [ -d "./$env" ]; then
+    [ -f "./$env/deactivate" ] && . "./$env/deactivate"
+  fi
+
+  cd $@
+
+  if [ -d "./$env" ]; then
+    [ -f "./$env/activate" ] && . "./$env/activate"
+  fi
+}
+export -xf cdcover

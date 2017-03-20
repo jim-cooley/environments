@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+#
+
+usage="
+usage:
+aws-list-defaults: [ -p {profile}]
+
+parameters:
+-p | --profile {profile} - use '{profile}' instead of the default profile in the environment file.
+"
+
+declare profile=""
+declare profile_name=""
+declare -i stop=0
+
+if [ $# -eq 0 ]; then
+	printf "\n%s\n" "$usage"
+else
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-h | --help)
+				printf "\n%s\n" "$usage"
+				stop=1
+				;;
+			-p | --profile)
+				profile_name="$2"
+				profile="--profile $2" && shift ;;
+			*)
+				;;
+		esac
+		shift
+	done
+fi
+
+if [ $stop -eq 0 ]; then
+
+	printf "\nAWS defaults in use for profile: $profile_name\n\n"
+	(set -o posix; set) | grep -i AWS_
+
+fi
