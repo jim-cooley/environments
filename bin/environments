@@ -1,3 +1,6 @@
+#!/bin/bash
+
+declare -x ENVROOT="${ENVROOT:-$(cd ~; pwd)/environments}"
 environment () {
 
 	ENVROOT="${ENVROOT:-$(cd ~; pwd)/environments}"
@@ -5,6 +8,7 @@ environment () {
   cfg='.config'
   env='env'
 	envname=""
+	projname=""
   projdir=""
 
 	declare -i create_project=0
@@ -15,7 +19,7 @@ environment: [-h] [-n] [-p {project) | {name}]
 
 parameters:
 -h | --help    - print this text
--n | --new     - create a new environment with given name (optionally w/in a project)
+-c | --create  - create a new environment with given name (optionally w/in a project)
 -p | --profile - use '{profile}' instead of the default profile in the environment file.
 
 "
@@ -29,14 +33,25 @@ parameters:
         -h | --help)
           printf "usage: \n%s\n" "$usage"
           stop=1 ;;
-        -n | --new)
-          create_project=1 ;;
+        -c | --create)
+          create_project=1
+					envname="$(basename $2)"
+          if [ "$envname" != "$2" ]; then
+						projname="$envname"
+						projdir="$2"
+					fi
+					shift ;;
         -p | --project)
 					projname="$(basename $2)"
           projdir="$2"
 					shift ;;
         *)
-          envname="$1" ;;
+					envname="$(basename $1)"
+					if [ "$envname" != "$1" ]; then
+						projname="$envname"
+						projdir="$1"
+					fi
+					;;
       esac
       shift
     done
@@ -50,29 +65,39 @@ parameters:
   projcfg="$projdir/$cfg"
   projenv="$projcfg/$env"
 
-  #pre config
-  if [ -d "$projenv" ]; then
-    [ -f "$projenv/activate" ] && . "$projenv/activate"
-  fi
+	if [ $create_project -ne 0 ]; then
+		echo "creating project: $projname @ $projenv"
+		mkdir -p "$projenv"
+		touch "$projenv/activate"
 
-  # config (evaluate configs). CONSIDER: could use 'runparts' for this.
-	# right now there are just three groups:
-	#   !(name) - are all executed first
-	#   (name)  - are executed next
-	#   ~(name) - are all executed last
-  cd "$projdir"
-  for cf in "$projenv"/\!$projname.* ; do
-    [ -e "$cf" ] && printf "loading %s...\n" $(basename $cf) && . "$cf"
-  done
-  for cf in "$projenv"/$projname.* ; do
-    if [ -e "$cf" ] && [[ ${cf:0:1} != \! ]] && [[ ${cf:0:1} != \~ ]] ; then
-      printf "loading %s...\n" $(basename $cf)
-      . "$cf"
-    fi
-  done
-  for cf in "$projenv"/\~$projnamet.* ; do
-    [ -e "$cf" ] && printf "loading %s...\n" $(basename $cf) && . "$cf"
-  done
+	# activate environment
+	else
+
+	  #pre config
+	  if [ -d "$projenv" ]; then
+	    [ -f "$projenv/activate" ] && . "$projenv/activate"
+	  fi
+
+	  # config (evaluate configs). CONSIDER: could use 'runparts' for this.
+		# right now there are just three groups:
+		#   !(name) - are all executed first
+		#   (name)  - are executed next
+		#   ~(name) - are all executed last
+	  pushd "$projdir" > /dev/null 2>&1
+	  for cf in "$projenv"/\!$projname.* ; do
+	    [ -e "$cf" ] && printf "loading %s...\n" $(basename $cf) && . "$cf"
+	  done
+	  for cf in "$projenv"/$projname.* ; do
+	    if [ -e "$cf" ] && [[ ${cf:0:1} != \! ]] && [[ ${cf:0:1} != \~ ]] ; then
+	      printf "loading %s...\n" $(basename $cf)
+	      . "$cf"
+	    fi
+	  done
+	  for cf in "$projenv"/\~$projnamet.* ; do
+	    [ -e "$cf" ] && printf "loading %s...\n" $(basename $cf) && . "$cf"
+	  done
+		popd > /dev/null 2>&1
+	fi
 
 	# path
   export OLDPATH=$PATH
@@ -83,4 +108,4 @@ parameters:
     export PATH="$ADDPATH:$PATH"
 	fi
 }
-declare -xf environments
+declare -xf environment
